@@ -74,20 +74,28 @@ def export_to_google_sheet(df: pd.DataFrame):
     # so row 1 (your headers) stays intact
 
 def export_titles_to_column_b(df: pd.DataFrame):
-    # Authorize as before…
+    # 1) Authorize
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ]
     creds = ServiceAccountCredentials.from_json_keyfile_name(
         "honeymoonmonitor-1e60328f5b40.json",
-        ["https://spreadsheets.google.com/feeds","https://www.googleapis.com/auth/drive"]
+        scope
     )
     client = gspread.authorize(creds)
     sheet = client.open("honeymoon spreadsheet").sheet1
 
-    # Prepare a list-of-lists: first row is the header, then each title as its own list
-    values = [["Title"]] + [[title] for title in df["Title"]]
+    # 2) Build a list-of-lists for B1:B{n}
+    #    first row is header, then one title per list
+    values = [["Title"]] + [[t] for t in df["Title"].tolist()]
 
-    # Write into B1:B{n}
+    # 3) Compute the range (e.g. B1:B10)
     end_row = len(values)
-    sheet.update(f"B1:B{end_row}", values)
+    cell_range = f"B1:B{end_row}"
+
+    # 4) Update just that range
+    sheet.update(cell_range, values, value_input_option="USER_ENTERED")
 
 # ─── 4) Streamlit UI ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
