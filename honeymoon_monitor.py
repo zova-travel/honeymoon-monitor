@@ -12,6 +12,16 @@ reddit = praw.Reddit(
     user_agent=os.getenv("REDDIT_USER_AGENT")
 )
 
+import prawcore
+
+for name in ["travel", "weddingplanning", "honeymoon", "solotravel", "IWantOut"]:
+    try:
+        reddit.subreddit(name).about()
+        print(f"✅ r/{name} exists")
+    except prawcore.exceptions.NotFound:
+        print(f"❌ r/{name} NOT FOUND")
+
+
 # Keywords to detect honeymoon intent
 KEYWORDS = [
     "honeymoon", "just married", "getting married", "destination wedding",
