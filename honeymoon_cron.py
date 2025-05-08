@@ -17,8 +17,21 @@ KEYWORDS = [
     "honeymoon", "just married", "getting married", "destination wedding",
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
-SUBS = ["travel", "weddingplanning", "JustEngaged", "Weddings",
-        "HoneymoonTravel", "HoneymoonIdeas", "Marriage", "relationship_advice"]
+TARGET_SUBREDDITS = [
+  "travel",
+  "weddingplanning",
+  "JustEngaged",
+  "Weddings",
+  "HoneymoonTravel",
+  "HoneymoonIdeas",
+  "Marriage",
+  "relationship_advice",
+  "DestinationWedding",
+  "BridalFashion",
+  "BridetoBe",
+  "AskMarriage"
+]
+
 
 # 3) Fetch & filter
 def fetch_leads():
