@@ -72,7 +72,3 @@ if not df.empty:
         st.success(f"Exported {len(df)} leads to Google Sheets!")
     else:
         st.info("Click above to export leads to Google Sheets.")
-
-creds = ServiceAccountCredentials.from_json_keyfile_name(
-    "honeymoonmonitor-1e60328f5b40.json", scope
-)
