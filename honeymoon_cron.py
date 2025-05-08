@@ -3,7 +3,6 @@ import pandas as pd
 import praw
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from prawcore.exceptions import NotFound
 from prawcore.exceptions import NotFound, Redirect
 
 # 1) Reddit setup
@@ -18,55 +17,50 @@ KEYWORDS = [
     "honeymoon", "just married", "getting married", "destination wedding",
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
-
-
-# 3) Define the subs you want to scan
-TARGET_SUBREDDITS = [
-  "travel",
-  "weddingplanning",
-  "JustEngaged",
-  "Weddings",
-  "HoneymoonTravel",
-  "HoneymoonIdeas",
-  "Marriage",
-  "relationship_advice",
-  "DestinationWedding",
-  "BridalFashion",
-  "BridetoBe",
-  "AskMarriage"
+SUBS = [
+    "travel", "weddingplanning", "JustEngaged", "Weddings",
+    "HoneymoonTravel", "HoneymoonIdeas", "Marriage", "relationship_advice"
 ]
 
-# 4) Fetch & filter
+# 3) Fetch & filter
 def fetch_leads():
     leads = []
-    for sub in TARGET_SUBREDDITS:
+    for sub in SUBS:
         try:
-            _ = reddit.subreddit(sub).id   # forces existence check
-            for post in reddit.subreddit(sub).new(limit=50):
-                text = (post.title + " " + (post.selftext or "")).lower()
-                if any(k in text for k in KEYWORDS):
-                    leads.append({
-                        "Subreddit": sub,
-                        "Title":     post.title,
-                        "Author":    post.author.name if post.author else "N/A",
-                        "URL":       f"https://reddit.com{post.permalink}"
-                    })
-        except NotFound:
+            # force lookup to catch NotFound or Redirect
+            _ = reddit.subreddit(sub).id
+            submissions = reddit.subreddit(sub).new(limit=50)
+        except (NotFound, Redirect):
             continue
+
+        for post in submissions:
+            text = (post.title + " " + (post.selftext or "")).lower()
+            if any(k in text for k in KEYWORDS):
+                leads.append({
+                    "Subreddit": sub,
+                    "Title":      post.title,
+                    "Author":     post.author.name if post.author else "N/A",
+                    "URL":        f"https://reddit.com{post.permalink}"
+                })
+
     return pd.DataFrame(leads)
 
-
-# 5) Google Sheets export
+# 4) Google Sheets export
 def export_to_sheets(df):
-    scope = ["https://spreadsheets.google.com/feeds",
-             "https://www.googleapis.com/auth/drive"]
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
     creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "honeymoonmonitor-1e60328f5b40.json", scope)
+        "honeymoonmonitor-<your-json-filename>.json",  # replace with your actual JSON key name
+        scope
+    )
     client = gspread.authorize(creds)
     sheet = client.open("honeymoon spreadsheet").sheet1
     sheet.clear()
     sheet.update([df.columns.tolist()] + df.values.tolist())
 
+# 5) Run on schedule
 if __name__ == "__main__":
     df = fetch_leads()
     if not df.empty:
