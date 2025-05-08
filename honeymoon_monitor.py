@@ -71,7 +71,22 @@ st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 st.title("🌴 Honeymoon Travel Leads Monitor")
 
 # Subreddit selection
-TARGET_SUBREDDITS = ["travel", "weddingplanning", "HoneymoonTravel", "solotravel", "IWantOut", "TravelAdvisors", "WeddingPlanning"]
+TARGET_SUBREDDITS = [
+  "travel",
+  "weddingplanning",
+  "JustEngaged",
+  "Weddings",
+  "HoneymoonTravel",
+  "HoneymoonIdeas",
+  "Marriage",
+  "relationship_advice",
+  "DestinationWedding",
+  "BridalFashion",
+  "BridetoBe",
+  "AskMarriage",
+    "travelagent",
+]
+
 sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
 df  = get_honeymoon_posts(sub.lower())
 
