@@ -28,7 +28,8 @@ KEYWORDS = [
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
 
-from prawcore.exceptions import NotFound   # <- make sure you import from prawcore.exceptions
+# <- make sure you import from prawcore.exceptions
+from prawcore.exceptions import NotFound   
 
 def get_honeymoon_posts(subreddit_name="travel"):
     posts = []
