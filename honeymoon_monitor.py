@@ -29,7 +29,8 @@ KEYWORDS = [
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
 
-# <- make sure you import from prawcore.exceptions
+# Function to fetch and filter posts
+<- make sure you import from prawcore.exceptions
 from prawcore.exceptions import NotFound
 
 def get_honeymoon_posts(subreddit_name="travel"):
@@ -71,7 +72,7 @@ st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 st.title("🌴 Honeymoon Travel Leads Monitor")
 
 # Subreddit selection
-TARGET_SUBREDDITS = ["travel", "weddingplanning", "honeymoon", "solotravel", "IWantOut"]
+TARGET_SUBREDDITS = ["travel", "weddingplanning", "HoneymoonTravel", "solotravel", "IWantOut", "TravelAdvisors", "WeddingPlanning",]
 sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
 df  = get_honeymoon_posts(sub.lower())
 
