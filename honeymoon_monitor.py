@@ -30,15 +30,17 @@ KEYWORDS = [
 ]
 
 # <- make sure you import from prawcore.exceptions
-from prawcore.exceptions import NotFound   
+from prawcore.exceptions import NotFound
 
 def get_honeymoon_posts(subreddit_name="travel"):
     posts = []
     sub_name = subreddit_name.lower()
     try:
+        # .id forces the check up‐front
+        _ = reddit.subreddit(sub_name).id
         submissions = reddit.subreddit(sub_name).new(limit=50)
     except NotFound:
-        st.warning(f"r/{sub_name} not found or inaccessible – skipping.")
+        st.warning(f"r/{sub_name} not found or inaccessible—skipping.")
         return pd.DataFrame(posts)
 
     for submission in submissions:
@@ -47,7 +49,7 @@ def get_honeymoon_posts(subreddit_name="travel"):
             posts.append({
                 "Title": submission.title,
                 "Author": submission.author.name if submission.author else "N/A",
-                "URL":   f"https://reddit.com{submission.permalink}"
+                "URL": f"https://reddit.com{submission.permalink}"
             })
     return pd.DataFrame(posts)
 
