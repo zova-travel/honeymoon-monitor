@@ -12,13 +12,14 @@ reddit = praw.Reddit(
     user_agent=os.getenv("REDDIT_USER_AGENT")
 )
 
-import prawcore
+from prawcore.exceptions import NotFound
 
 for name in ["travel", "weddingplanning", "honeymoon", "solotravel", "IWantOut"]:
     try:
-        reddit.subreddit(name).about()
+        # Accessing .id will force PRAW to fetch and raise 404 if not found
+        _ = reddit.subreddit(name).id
         print(f"✅ r/{name} exists")
-    except prawcore.exceptions.NotFound:
+    except NotFound:
         print(f"❌ r/{name} NOT FOUND")
 
 
