@@ -28,16 +28,15 @@ KEYWORDS = [
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
 
-# Function to fetch and filter posts
-from prawcore import NotFound
+from prawcore.exceptions import NotFound   # <- make sure you import from prawcore.exceptions
 
 def get_honeymoon_posts(subreddit_name="travel"):
     posts = []
-    sub_name = subreddit_name.lower()                  # normalize
+    sub_name = subreddit_name.lower()
     try:
         submissions = reddit.subreddit(sub_name).new(limit=50)
     except NotFound:
-        st.warning(f"r/{sub_name} not found. Skipping.")
+        st.warning(f"r/{sub_name} not found or inaccessible – skipping.")
         return pd.DataFrame(posts)
 
     for submission in submissions:
@@ -46,9 +45,10 @@ def get_honeymoon_posts(subreddit_name="travel"):
             posts.append({
                 "Title": submission.title,
                 "Author": submission.author.name if submission.author else "N/A",
-                "URL": f"https://reddit.com{submission.permalink}"
+                "URL":   f"https://reddit.com{submission.permalink}"
             })
     return pd.DataFrame(posts)
+
 
 
 # Function to export DataFrame to Google Sheets
