@@ -93,13 +93,32 @@ sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
 df  = get_honeymoon_posts(sub.lower())
 
 # Fetch and display posts
-df = get_honeymoon_posts(sub)
+df = get_honeymoon_posts(sub.lower())
 st.dataframe(df)
 
-# Export button
+# Automatically export any non-empty results
 if not df.empty:
-    if st.button("Export to Google Sheets"):
+    try:
         export_to_google_sheet(df)
-        st.success(f"Exported {len(df)} leads to Google Sheets!")
-    else:
-        st.info("Click above to export leads to Google Sheets.")
+        st.success(f"Automatically exported {len(df)} leads to Google Sheets!")
+    except Exception as e:
+        st.error(f"Export failed: {e}")
+
+# Subreddit selection
+sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
+
+# Fetch & show
+df = get_honeymoon_posts(sub.lower())
+st.dataframe(df)
+
+# Auto-export
+if not df.empty:
+    try:
+        export_to_google_sheet(df)
+        st.success(f"Automatically exported {len(df)} leads to Google Sheets!")
+    except Exception as e:
+        st.error(f"Export failed: {e}")
+
+
+
+
