@@ -1,23 +1,54 @@
-import os
+import streamlit as st
 import praw
 import pandas as pd
+import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from prawcore.exceptions import NotFound
 
-# 1) Reddit setup
+# Setup Reddit API
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
     user_agent=os.getenv("REDDIT_USER_AGENT")
 )
 
-# 2) Keywords & subreddits
+# Keywords to detect honeymoon intent
 KEYWORDS = [
     "honeymoon", "just married", "getting married", "destination wedding",
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
-SUBS = ["travel",
+
+# Function to fetch and filter posts
+def get_honeymoon_posts(subreddit_name="travel"):
+    posts = []
+    for submission in reddit.subreddit(subreddit_name).new(limit=50):
+        text = (submission.title + " " + (submission.selftext or "")).lower()
+        if any(keyword in text for keyword in KEYWORDS):
+            posts.append({
+                "Title": submission.title,
+                "Author": submission.author.name if submission.author else "N/A",
+                "URL": f"https://reddit.com{submission.permalink}"
+            })
+    return pd.DataFrame(posts)
+
+# Function to export DataFrame to Google Sheets
+def export_to_google_sheet(df):
+    scope = ["https://spreadsheets.google.com/feeds",
+             "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+        "honeymoonmonitor-1e60328f5b40.json", scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("Honeymoon Leads").sheet1
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+
+# Streamlit UI
+st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
+st.title("🌴 Honeymoon Travel Leads Monitor")
+
+# Subreddit selection
+TARGET_SUBREDDITS = [
+  "travel",
   "weddingplanning",
   "JustEngaged",
   "Weddings",
@@ -28,40 +59,18 @@ SUBS = ["travel",
   "DestinationWedding",
   "BridalFashion",
   "BridetoBe",
-  "AskMarriage",
-    "travelagent",]
+  "AskMarriage"
+]
 
-# 3) Fetch & filter
-def fetch_leads():
-    leads = []
-    for sub in SUBS:
-        try:
-            reddit.subreddit(sub).id  # force existence check
-            for post in reddit.subreddit(sub).new(limit=50):
-                text = (post.title + " " + (post.selftext or "")).lower()
-                if any(k in text for k in KEYWORDS):
-                    leads.append({
-                        "Subreddit": sub,
-                        "Title": post.title,
-                        "Author": post.author.name if post.author else "N/A",
-                        "URL": f"https://reddit.com{post.permalink}"
-                    })
-        except NotFound:
-            continue
-    return pd.DataFrame(leads)
 
-# 4) Google Sheets export
-def export_to_sheets(df):
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "honeymoonmonitor-1e60328f5b40.json",
-        ["https://spreadsheets.google.com/feeds","https://www.googleapis.com/auth/drive"]
-    )
-    client = gspread.authorize(creds)
-    sheet = client.open("honeymoon spreadsheet").sheet1
-    sheet.clear()
-    sheet.update([df.columns.tolist()] + df.values.tolist())
+# Fetch and display posts
+df = get_honeymoon_posts(sub)
+st.dataframe(df)
 
-if __name__ == "__main__":
-    df = fetch_leads()
-    if not df.empty:
-        export_to_sheets(df)
+# Export button
+if not df.empty:
+    if st.button("Export to Google Sheets"):
+        export_to_google_sheet(df)
+        st.success(f"Exported {len(df)} leads to Google Sheets!")
+    else:
+        st.info("Click above to export leads to Google Sheets.")
