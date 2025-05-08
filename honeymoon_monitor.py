@@ -19,9 +19,18 @@ KEYWORDS = [
 ]
 
 # Function to fetch and filter posts
+from prawcore import NotFound
+
 def get_honeymoon_posts(subreddit_name="travel"):
     posts = []
-    for submission in reddit.subreddit(subreddit_name).new(limit=50):
+    sub_name = subreddit_name.lower()                  # normalize
+    try:
+        submissions = reddit.subreddit(sub_name).new(limit=50)
+    except NotFound:
+        st.warning(f"r/{sub_name} not found. Skipping.")
+        return pd.DataFrame(posts)
+
+    for submission in submissions:
         text = (submission.title + " " + (submission.selftext or "")).lower()
         if any(keyword in text for keyword in KEYWORDS):
             posts.append({
@@ -30,6 +39,7 @@ def get_honeymoon_posts(subreddit_name="travel"):
                 "URL": f"https://reddit.com{submission.permalink}"
             })
     return pd.DataFrame(posts)
+
 
 # Function to export DataFrame to Google Sheets
 def export_to_google_sheet(df):
@@ -47,7 +57,9 @@ st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 st.title("🌴 Honeymoon Travel Leads Monitor")
 
 # Subreddit selection
-sub = st.selectbox("Choose subreddit to scan:", ["travel", "weddingplanning", "honeymoon", "solotravel", "IWantOut"])
+TARGET_SUBREDDITS = ["travel", "weddingplanning", "honeymoon", "solotravel", "IWantOut"]
+sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
+df  = get_honeymoon_posts(sub.lower())
 
 # Fetch and display posts
 df = get_honeymoon_posts(sub)
@@ -60,3 +72,7 @@ if not df.empty:
         st.success(f"Exported {len(df)} leads to Google Sheets!")
     else:
         st.info("Click above to export leads to Google Sheets.")
+
+creds = ServiceAccountCredentials.from_json_keyfile_name(
+    "honeymoonmonitor-1e60328f5b40.json", scope
+)
