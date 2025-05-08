@@ -4,6 +4,7 @@ import praw
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from prawcore.exceptions import NotFound
+from prawcore.exceptions import NotFound, Redirect
 
 # 1) Reddit setup
 reddit = praw.Reddit(
@@ -32,26 +33,25 @@ TARGET_SUBREDDITS = [
   "AskMarriage"
 ]
 
-
 # 3) Fetch & filter
 def fetch_leads():
     leads = []
-    for sub in SUBS:
+    for sub in TARGET_SUBREDDITS:
         try:
-            # force a lookup to catch 404s
-            _ = reddit.subreddit(sub).id
+            _ = reddit.subreddit(sub).id   # forces existence check
             for post in reddit.subreddit(sub).new(limit=50):
                 text = (post.title + " " + (post.selftext or "")).lower()
                 if any(k in text for k in KEYWORDS):
                     leads.append({
                         "Subreddit": sub,
-                        "Title": post.title,
-                        "Author": post.author.name if post.author else "N/A",
-                        "URL": f"https://reddit.com{post.permalink}"
+                        "Title":     post.title,
+                        "Author":    post.author.name if post.author else "N/A",
+                        "URL":       f"https://reddit.com{post.permalink}"
                     })
         except NotFound:
             continue
     return pd.DataFrame(leads)
+
 
 # 4) Google Sheets export
 def export_to_sheets(df):
