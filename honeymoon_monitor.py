@@ -18,6 +18,22 @@ KEYWORDS = [
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
 
+# Subreddit selection
+TARGET_SUBREDDITS = [
+  "travel",
+  "weddingplanning",
+  "JustEngaged",
+  "Weddings",
+  "HoneymoonTravel",
+  "HoneymoonIdeas",
+  "Marriage",
+  "relationship_advice",
+  "DestinationWedding",
+  "BridalFashion",
+  "BridetoBe",
+  "AskMarriage"
+]
+
 # Function to fetch and filter posts
 def get_honeymoon_posts(subreddit_name="travel"):
     posts = []
@@ -45,23 +61,6 @@ def export_to_google_sheet(df):
 # Streamlit UI
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 st.title("🌴 Honeymoon Travel Leads Monitor")
-
-# Subreddit selection
-TARGET_SUBREDDITS = [
-  "travel",
-  "weddingplanning",
-  "JustEngaged",
-  "Weddings",
-  "HoneymoonTravel",
-  "HoneymoonIdeas",
-  "Marriage",
-  "relationship_advice",
-  "DestinationWedding",
-  "BridalFashion",
-  "BridetoBe",
-  "AskMarriage"
-]
-
 
 # Fetch and display posts
 df = get_honeymoon_posts(sub)
