@@ -62,9 +62,11 @@ def export_to_google_sheet(df):
     creds = ServiceAccountCredentials.from_json_keyfile_name(
         "honeymoonmonitor-1e60328f5b40.json", scope)
     client = gspread.authorize(creds)
-    sheet = client.open("Honeymoon Leads").sheet1
+    # Match your sheet’s exact name:
+    sheet = client.open("honeymoon spreadsheet").sheet1
     sheet.clear()
     sheet.update([df.columns.values.tolist()] + df.values.tolist())
+
 
 # Streamlit UI
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
