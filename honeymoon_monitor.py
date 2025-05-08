@@ -55,20 +55,24 @@ def get_honeymoon_posts(subreddit_name: str):
             })
     return pd.DataFrame(posts)
 
-
 def export_to_google_sheet(df: pd.DataFrame):
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
     ]
     creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "honeymoonmonitor-1e60328f5b40.json",
-        scope
+        "honeymoonmonitor-1e60328f5b40.json", scope
     )
     client = gspread.authorize(creds)
     sheet = client.open("honeymoon spreadsheet").sheet1
-    sheet.clear()
-    sheet.update([df.columns.tolist()] + df.values.tolist())
+
+    # Convert DataFrame to list of lists (without header)
+    rows = df.values.tolist()
+    # Append all rows at once
+    sheet.append_rows(rows, table_range="A2")  
+    # note: table_range="A2" starts appending at row 2,
+    # so row 1 (your headers) stays intact
+
 
 # ─── 4) Streamlit UI ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
