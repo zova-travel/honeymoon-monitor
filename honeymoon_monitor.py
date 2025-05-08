@@ -73,6 +73,21 @@ def export_to_google_sheet(df: pd.DataFrame):
     # note: table_range="A2" starts appending at row 2,
     # so row 1 (your headers) stays intact
 
+def export_titles_to_column_b(df: pd.DataFrame):
+    # Authorize as before…
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+        "honeymoonmonitor-1e60328f5b40.json",
+        ["https://spreadsheets.google.com/feeds","https://www.googleapis.com/auth/drive"]
+    )
+    client = gspread.authorize(creds)
+    sheet = client.open("honeymoon spreadsheet").sheet1
+
+    # Prepare a list-of-lists: first row is the header, then each title as its own list
+    values = [["Title"]] + [[title] for title in df["Title"]]
+
+    # Write into B1:B{n}
+    end_row = len(values)
+    sheet.update(f"B1:B{end_row}", values)
 
 # ─── 4) Streamlit UI ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
