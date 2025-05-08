@@ -18,6 +18,9 @@ KEYWORDS = [
     "honeymoon", "just married", "getting married", "destination wedding",
     "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
 ]
+
+
+# 3) Define the subs you want to scan
 TARGET_SUBREDDITS = [
   "travel",
   "weddingplanning",
@@ -33,7 +36,7 @@ TARGET_SUBREDDITS = [
   "AskMarriage"
 ]
 
-# 3) Fetch & filter
+# 4) Fetch & filter
 def fetch_leads():
     leads = []
     for sub in TARGET_SUBREDDITS:
@@ -53,7 +56,7 @@ def fetch_leads():
     return pd.DataFrame(leads)
 
 
-# 4) Google Sheets export
+# 5) Google Sheets export
 def export_to_sheets(df):
     scope = ["https://spreadsheets.google.com/feeds",
              "https://www.googleapis.com/auth/drive"]
