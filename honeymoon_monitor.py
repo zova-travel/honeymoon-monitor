@@ -89,23 +89,33 @@ def export_to_google_sheet(df: pd.DataFrame):
     client = gspread.authorize(creds)
     sheet = client.open("honeymoon spreadsheet").sheet1
 
-    # 2) Pull existing URLs (col D) to avoid duplicates
+    # 2) Grab existing URLs from column D to avoid duplicates
     try:
         existing_urls = set(sheet.col_values(4))
     except Exception:
         existing_urls = set()
 
-    # 3) Build rows: [Title, Author, URL, Subreddit]
+    # 3) Build rows: ['', Title, Author, URL, Subreddit]
     rows_to_append = []
     for _, row in df.iterrows():
         url = row["URL"]
         if url not in existing_urls:
             rows_to_append.append([
-                row["Title"],
-                row["Author"],
-                url,
-                row.get("Subreddit", "")
+                "",                 # blank for column A
+                row["Title"],       # column B
+                row["Author"],      # column C
+                url,                # column D
+                row["Subreddit"]    # column E
             ])
+            existing_urls.add(url)
+
+    # 4) Append them all at once
+    if rows_to_append:
+        # No table_range: let gspread append at the first empty row
+        sheet.append_rows(
+            rows_to_append,
+            value_input_option="USER_ENTERED"
+        )
 
     # 4) Append into B2:E
     if rows_to_append:
