@@ -3,4 +3,4 @@ praw
 pandas
 gspread
 oauth2client
-pip install streamlit-authenticator
+streamlit-authenticator
