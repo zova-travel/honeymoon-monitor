@@ -1,33 +1,21 @@
 import streamlit as st
-import streamlit_authenticator as stauth
+import os
 
-# (the config snippet above)
-config = st.secrets["credentials"]
-cookie_conf = {
-    "name": st.secrets["cookie"]["name"],
-    "key":  st.secrets["cookie"]["key"],
-    "expiry_days": st.secrets["cookie"]["expiry_days"],
-}
-authenticator = stauth.Authenticate(
-    credentials=config,
-    cookie_name=cookie_conf["name"],
-    key=cookie_conf["key"],
-    cookie_expiry_days=cookie_conf["expiry_days"],
-)
-name, auth_status, username = authenticator.login("Login", "main")
+# Simple login via env vars
+st.set_page_config(page_title="Login", layout="centered")
+st.title("🔒 Login Required")
 
-if auth_status:
-    # ─── your existing imports, constants, functions, and UI go here ───
+# Sidebar inputs
+uname = st.sidebar.text_input("Username")
+pwd   = st.sidebar.text_input("Password", type="password")
 
-    authenticator.logout("Logout", "sidebar")  # optional: show logout in sidebar
-    st.write(f"Welcome *{name}*")
+# Pull expected creds from environment
+EXPECTED_USER = os.getenv("APP_USERNAME")
+EXPECTED_PASS = os.getenv("APP_PASSWORD")
 
-    # … rest of your app (get_honeymoon_posts, export functions, UI) …
-
-elif auth_status is False:
-    st.error("❌ Username/password is incorrect")
-else:
-    st.info("🔐 Please enter your username and password")
+if uname != EXPECTED_USER or pwd != EXPECTED_PASS:
+    st.error("❌ Invalid credentials")
+    st.stop()  # stop further execution until login succeeds
 
 import os
 import pandas as pd
