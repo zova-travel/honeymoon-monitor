@@ -48,11 +48,13 @@ def get_honeymoon_posts(subreddit_name: str):
     for post in submissions:
         text = (post.title + " " + (post.selftext or "")).lower()
         if any(k in text for k in KEYWORDS):
-            posts.append({
-                "Title":  post.title,
-                "Author": post.author.name if post.author else "N/A",
-                "URL":    f"https://reddit.com{post.permalink}"
-            })
+          posts.append({
+    "Subreddit": subreddit_name,               # ← new field
+    "Title":     post.title,
+    "Author":    post.author.name if post.author else "N/A",
+    "URL":       f"https://reddit.com{post.permalink}"
+})
+
     return pd.DataFrame(posts)
 
 def export_titles_to_column_b(df: pd.DataFrame):
@@ -100,13 +102,14 @@ def export_to_google_sheet(df: pd.DataFrame):
     for _, row in df.iterrows():
         url = row["URL"]
         if url not in existing_urls:
-            rows_to_append.append([
-                "",                 # blank for column A
-                row["Title"],       # column B
-                row["Author"],      # column C
-                url,                # column D
-                row["Subreddit"]    # column E
-            ])
+          rows_to_append.append([
+    "",                # blank for col A
+    row["Title"],      # col B
+    row["Author"],     # col C
+    row["URL"],        # col D
+    row["Subreddit"]   # col E
+])
+
             existing_urls.add(url)
 
     # 4) Append them all at once
