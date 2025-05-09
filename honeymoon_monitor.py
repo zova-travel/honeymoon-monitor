@@ -1,3 +1,34 @@
+import streamlit as st
+import streamlit_authenticator as stauth
+
+# (the config snippet above)
+config = st.secrets["credentials"]
+cookie_conf = {
+    "name": st.secrets["cookie"]["name"],
+    "key":  st.secrets["cookie"]["key"],
+    "expiry_days": st.secrets["cookie"]["expiry_days"],
+}
+authenticator = stauth.Authenticate(
+    credentials=config,
+    cookie_name=cookie_conf["name"],
+    key=cookie_conf["key"],
+    cookie_expiry_days=cookie_conf["expiry_days"],
+)
+name, auth_status, username = authenticator.login("Login", "main")
+
+if auth_status:
+    # ─── your existing imports, constants, functions, and UI go here ───
+
+    authenticator.logout("Logout", "sidebar")  # optional: show logout in sidebar
+    st.write(f"Welcome *{name}*")
+
+    # … rest of your app (get_honeymoon_posts, export functions, UI) …
+
+elif auth_status is False:
+    st.error("❌ Username/password is incorrect")
+else:
+    st.info("🔐 Please enter your username and password")
+
 import os
 import pandas as pd
 import praw
