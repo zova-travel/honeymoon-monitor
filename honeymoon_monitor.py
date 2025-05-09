@@ -1,25 +1,66 @@
 import os
+import sqlite3
+import hashlib
 import streamlit as st
 
-# ─── 0) Simple login ────────────────────────────────────────────────────────────
+# ─── 0) Page config (first call) ───────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
-st.sidebar.title("🔒 Login")
 
+# ─── 1) User DB Setup ───────────────────────────────────────────────────────────
+conn = sqlite3.connect("users.db", check_same_thread=False)
+c    = conn.cursor()
+c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        username       TEXT PRIMARY KEY,
+        password_hash  TEXT NOT NULL
+    )
+""")
+conn.commit()
+
+# ─── 2) Auth UI ─────────────────────────────────────────────────────────────────
+st.sidebar.title("🔒 Account")
+
+mode = st.sidebar.radio("Action", ["Login", "Create Account"])
 user = st.sidebar.text_input("Username")
 pw   = st.sidebar.text_input("Password", type="password")
-login = st.sidebar.button("Login")
+btn  = st.sidebar.button("Submit")
 
+# initialize flag
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-if login:
-    if user == os.getenv("APP_USERNAME") and pw == os.getenv("APP_PASSWORD"):
-        st.session_state.logged_in = True
-    else:
-        st.sidebar.error("❌ Invalid username or password")
+def hash_pw(pw: str) -> str:
+    return hashlib.sha256(pw.encode()).hexdigest()
 
+if btn:
+    if mode == "Create Account":
+        c.execute("SELECT 1 FROM users WHERE username = ?", (user,))
+        if c.fetchone():
+            st.sidebar.error("❌ Username already taken")
+        else:
+            c.execute(
+                "INSERT INTO users (username,password_hash) VALUES (?,?)",
+                (user, hash_pw(pw))
+            )
+            conn.commit()
+            st.sidebar.success("✅ Account created! Please switch to Login.")
+    else:  # Login
+        c.execute("SELECT password_hash FROM users WHERE username = ?", (user,))
+        row = c.fetchone()
+        if row and row[0] == hash_pw(pw):
+            st.session_state.logged_in = True
+        else:
+            st.sidebar.error("❌ Invalid username or password")
+
+# block until authenticated
 if not st.session_state.logged_in:
     st.stop()
+
+# optional logout
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.experimental_rerun()
+
 
 # ─── 1) Reddit & Google Sheets setup ────────────────────────────────────────────
 import pandas as pd
