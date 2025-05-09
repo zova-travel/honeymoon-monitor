@@ -38,8 +38,14 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=cookie_conf["expiry_days"],
 )
 
-# ─── 4) Show login widget ───────────────────────────────────────────────────────
-name, auth_status, username = authenticator.login("Login", "sidebar")
+# ─── 4) Render login widget (4 args!) ──────────────────────────────────────────
+name, auth_status, username = authenticator.login(
+    "Login",      # widget title
+    "Username",   # username field label
+    "Password",   # password field label
+    "sidebar"     # location: main, sidebar or unrendered
+)
+
 if not auth_status:
     if auth_status is False:
         st.sidebar.error("❌ Incorrect username or password")
