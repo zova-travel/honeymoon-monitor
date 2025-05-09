@@ -1,3 +1,35 @@
+import streamlit as st
+import streamlit_authenticator as stauth
+
+# 1) Load config from secrets.toml
+config = st.secrets["credentials"]
+cookie_conf = {
+    "name":        st.secrets["cookie"]["name"],
+    "key":         st.secrets["cookie"]["key"],
+    "expiry_days": st.secrets["cookie"]["expiry_days"],
+}
+
+# 2) Create the authenticator
+authenticator = stauth.Authenticate(
+    credentials=config,
+    cookie_name=cookie_conf["name"],
+    key=cookie_conf["key"],
+    cookie_expiry_days=cookie_conf["expiry_days"],
+)
+
+# 3) Render the login widget
+name, auth_status, username = authenticator.login("Login", "sidebar")
+
+# 4) Stop if not authenticated
+if not auth_status:
+    if auth_status is False:
+        st.error("❌ Username/password is incorrect")
+    st.stop()
+
+# 5) Show a logout button
+authenticator.logout("Logout", "sidebar")
+st.write(f"👋 Welcome *{name}*!")
+
 import os
 import sqlite3
 import hashlib
