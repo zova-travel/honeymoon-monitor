@@ -1,21 +1,74 @@
 import streamlit as st
 import os
+import sqlite3
+import hashlib
 
-# Simple login via env vars
-st.set_page_config(page_title="Login", layout="centered")
-st.title("🔒 Login Required")
+# ─── 0) User DB Setup ────────────────────────────────────────────────────────────
+# Connect to (or create) a SQLite database file in your app root
+conn = sqlite3.connect("users.db", check_same_thread=False)
+c = conn.cursor()
+# Create users table if it doesn't exist
+c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        username TEXT PRIMARY KEY,
+        password_hash TEXT NOT NULL
+    )
+""")
+conn.commit()
 
-# Sidebar inputs
+# ─── 1) Session State for Auth ───────────────────────────────────────────────────
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# ─── 2) Authentication UI ────────────────────────────────────────────────────────
+st.set_page_config(page_title="Login / Sign Up", layout="centered")
+st.title("🔒 Honeymoon Monitor Access")
+
+mode = st.sidebar.radio("Choose action", ["Login", "Create Account"])
+
 uname = st.sidebar.text_input("Username")
 pwd   = st.sidebar.text_input("Password", type="password")
 
-# Pull expected creds from environment
-EXPECTED_USER = os.getenv("APP_USERNAME")
-EXPECTED_PASS = os.getenv("APP_PASSWORD")
+def hash_pw(pw: str) -> str:
+    return hashlib.sha256(pw.encode()).hexdigest()
 
-if uname != EXPECTED_USER or pwd != EXPECTED_PASS:
-    st.error("❌ Invalid credentials")
-    st.stop()  # stop further execution until login succeeds
+if mode == "Create Account":
+    if st.sidebar.button("Sign Up"):
+        # Check if user exists
+        c.execute("SELECT 1 FROM users WHERE username = ?", (uname,))
+        if c.fetchone():
+            st.error("❌ Username already taken")
+        else:
+            # Insert new user
+            c.execute(
+                "INSERT INTO users (username,password_hash) VALUES (?,?)",
+                (uname, hash_pw(pwd))
+            )
+            conn.commit()
+            st.success("✅ Account created! You can now log in.")
+elif mode == "Login":
+    if st.sidebar.button("Login"):
+        c.execute(
+            "SELECT password_hash FROM users WHERE username = ?", (uname,)
+        )
+        row = c.fetchone()
+        if row and row[0] == hash_pw(pwd):
+            st.session_state.logged_in = True
+        else:
+            st.error("❌ Invalid username or password")
+
+# If not logged in yet, stop execution here
+if not st.session_state.logged_in:
+    st.stop()
+
+# ─── 3) (Optional) Show logout ──────────────────────────────────────────────────
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.experimental_rerun()
+
+# ─── 4) Main App Continues Below ────────────────────────────────────────────────
+# Now place your existing imports, keywords, functions, and UI code here...
+
 
 import os
 import pandas as pd
