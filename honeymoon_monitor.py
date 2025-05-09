@@ -89,28 +89,30 @@ def export_to_google_sheet(df: pd.DataFrame):
     client = gspread.authorize(creds)
     sheet = client.open("honeymoon spreadsheet").sheet1
 
-    # 2) Pull existing URLs from column D
+    # 2) Pull existing URLs (col D) to avoid duplicates
     try:
-        existing_urls = set(sheet.col_values(4))  # 4th column = D
+        existing_urls = set(sheet.col_values(4))
     except Exception:
         existing_urls = set()
 
-    # 3) Build rows to append [Title, Author, URL]
+    # 3) Build rows: [Title, Author, URL, Subreddit]
     rows_to_append = []
     for _, row in df.iterrows():
         url = row["URL"]
         if url not in existing_urls:
-            rows_to_append.append([row["Title"], row["Author"], url])
+            rows_to_append.append([
+                row["Title"],
+                row["Author"],
+                url,
+                row.get("Subreddit", "")
+            ])
 
-    # 4) Append into B2:D
+    # 4) Append into B2:E
     if rows_to_append:
-        # This will append each sublist so that:
-        #   Title → column B
-        #   Author → column C
-        #   URL → column D
+        # B→E covers four columns: Title, Author, URL, Subreddit
         sheet.append_rows(
             rows_to_append,
-            table_range="B2:D",
+            table_range="B2:E",
             value_input_option="USER_ENTERED"
         )
 
