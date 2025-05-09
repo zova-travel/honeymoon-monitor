@@ -55,6 +55,27 @@ def get_honeymoon_posts(subreddit_name: str):
             })
     return pd.DataFrame(posts)
 
+def export_titles_to_column_b(df: pd.DataFrame):
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+        "honeymoonmonitor-1e60328f5b40.json",
+        scope
+    )
+    client = gspread.authorize(creds)
+    sheet = client.open("honeymoon spreadsheet").sheet1
+
+    # Build the 2D list for B1:B{n}
+    values = [["Title"]] + [[t] for t in df["Title"].tolist()]
+    end_row = len(values)
+    cell_range = f"B1:B{end_row}"
+
+    # Update only column B
+    sheet.update(cell_range, values, value_input_option="USER_ENTERED")
+
+
 def export_to_google_sheet(df: pd.DataFrame):
     scope = [
         "https://spreadsheets.google.com/feeds",
@@ -73,46 +94,23 @@ def export_to_google_sheet(df: pd.DataFrame):
     # note: table_range="A2" starts appending at row 2,
     # so row 1 (your headers) stays intact
 
-def export_titles_to_column_b(df: pd.DataFrame):
-    # 1) Authorize
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "honeymoonmonitor-1e60328f5b40.json",
-        scope
-    )
-    client = gspread.authorize(creds)
-    sheet = client.open("honeymoon spreadsheet").sheet1
-
-    # 2) Build a list-of-lists for B1:B{n}
-    #    first row is header, then one title per list
-    values = [["Title"]] + [[t] for t in df["Title"].tolist()]
-
-    # 3) Compute the range (e.g. B1:B10)
-    end_row = len(values)
-    cell_range = f"B1:B{end_row}"
-
-    # 4) Update just that range
-    sheet.update(cell_range, values, value_input_option="USER_ENTERED")
-
 # ─── 4) Streamlit UI ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 st.title("🌴 Honeymoon Travel Leads Monitor")
 
-# ─── THIS is where `sub` gets defined ─────────────────────────────────────────────
+# Dropdown for the user to pick a subreddit
 sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
 
-# Now that `sub` exists, we can fetch and show results
+# Fetch & display posts for that choice
 df = get_honeymoon_posts(sub)
 st.dataframe(df)
 
-# Optional export button
+# Export button (or auto-export logic)
 if not df.empty:
     if st.button("Export to Google Sheets"):
-        export_to_google_sheet(df)
-        st.success(f"Exported {len(df)} leads to Google Sheets!")
+        export_titles_to_column_b(df)   # or whichever export function you’ve defined
+        st.success(f"Exported {len(df)} titles to column B!")
     else:
-        st.info("Click above to export leads to Google Sheets.")
+        st.info("Click above to export titles to column B.")
+
 
