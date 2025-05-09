@@ -1,15 +1,20 @@
 import streamlit as st
 import streamlit_authenticator as stauth
+import os
+import pandas as pd
+import praw
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from prawcore.exceptions import NotFound, Redirect
 
-# 1) Load config from secrets.toml
-config = st.secrets["credentials"]
-cookie_conf = {
-    "name":        st.secrets["cookie"]["name"],
-    "key":         st.secrets["cookie"]["key"],
-    "expiry_days": st.secrets["cookie"]["expiry_days"],
-}
+# ─── 1) Page config MUST be first ────────────────────────────────────────────────
+st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 
-# 2) Create the authenticator
+# ─── 2) Authentication (cookie + “remember me”) ─────────────────────────────────
+# Load your credentials & cookie settings from .streamlit/secrets.toml
+config      = st.secrets["credentials"]
+cookie_conf = st.secrets["cookie"]
+
 authenticator = stauth.Authenticate(
     credentials=config,
     cookie_name=cookie_conf["name"],
@@ -17,87 +22,17 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=cookie_conf["expiry_days"],
 )
 
-# 3) Render the login widget
+# Show the login widget in the sidebar
 name, auth_status, username = authenticator.login("Login", "sidebar")
 
-# 4) Stop if not authenticated
 if not auth_status:
     if auth_status is False:
-        st.error("❌ Username/password is incorrect")
-    st.stop()
+        st.sidebar.error("❌ Incorrect username or password")
+    st.stop()  # halt here until logged in
 
-# 5) Show a logout button
+# Once logged in, show a logout button
 authenticator.logout("Logout", "sidebar")
-st.write(f"👋 Welcome *{name}*!")
-
-import os
-import sqlite3
-import hashlib
-import pandas as pd
-import praw
-import gspread
-import streamlit as st
-from oauth2client.service_account import ServiceAccountCredentials
-from prawcore.exceptions import NotFound, Redirect
-
-# ─── 1) Streamlit must be configured first ───────────────────────────────────────
-st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
-
-# ─── 2) Authentication (SQLite-backed) ──────────────────────────────────────────
-# DB init
-conn = sqlite3.connect("users.db", check_same_thread=False)
-c = conn.cursor()
-c.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        username       TEXT PRIMARY KEY,
-        password_hash  TEXT NOT NULL
-    )
-""")
-conn.commit()
-
-# session state
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-# sidebar form
-mode = st.sidebar.radio("Action", ["Login", "Create Account"])
-uname = st.sidebar.text_input("Username")
-pwd   = st.sidebar.text_input("Password", type="password")
-
-def hash_pw(pw: str) -> str:
-    return hashlib.sha256(pw.encode()).hexdigest()
-
-if mode == "Create Account":
-    if st.sidebar.button("Sign Up"):
-        c.execute("SELECT 1 FROM users WHERE username = ?", (uname,))
-        if c.fetchone():
-            st.sidebar.error("❌ Username already taken")
-        else:
-            c.execute(
-                "INSERT INTO users (username, password_hash) VALUES (?,?)",
-                (uname, hash_pw(pwd))
-            )
-            conn.commit()
-            st.sidebar.success("✅ Account created! You can now log in.")
-elif mode == "Login":
-    if st.sidebar.button("Login"):
-        c.execute(
-            "SELECT password_hash FROM users WHERE username = ?", (uname,)
-        )
-        row = c.fetchone()
-        if row and row[0] == hash_pw(pwd):
-            st.session_state.logged_in = True
-        else:
-            st.sidebar.error("❌ Invalid username or password")
-
-# block until logged in
-if not st.session_state.logged_in:
-    st.stop()
-
-# optional logout
-if st.sidebar.button("Logout"):
-    st.session_state.logged_in = False
-    st.experimental_rerun()
+st.sidebar.write(f"👋 Welcome *{name}*!")
 
 # ─── 3) Reddit & Google Sheets Setup ────────────────────────────────────────────
 reddit = praw.Reddit(
@@ -129,7 +64,7 @@ def get_honeymoon_posts(subreddit_name: str) -> pd.DataFrame:
         _ = reddit.subreddit(subreddit_name).id
         submissions = reddit.subreddit(subreddit_name).new(limit=50)
     except (NotFound, Redirect):
-        st.warning(f"r/{subreddit_name} not found or inaccessible—skipping.")
+        st.warning(f"r/{subreddit_name} not found—skipping.")
         return pd.DataFrame(posts)
 
     for post in submissions:
@@ -144,40 +79,34 @@ def get_honeymoon_posts(subreddit_name: str) -> pd.DataFrame:
     return pd.DataFrame(posts)
 
 def export_to_google_sheet(df: pd.DataFrame):
-    # authorize
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
+    creds  = ServiceAccountCredentials.from_json_keyfile_name(
         "honeymoonmonitor-1e60328f5b40.json", scope
     )
     client = gspread.authorize(creds)
     sheet  = client.open("honeymoon spreadsheet").sheet1
 
-    # avoid duplicates by URL
-    try:
-        existing_urls = set(sheet.col_values(4))  # column D
-    except Exception:
-        existing_urls = set()
-
+    # Pull existing URLs (col D)
+    existing = set(sheet.col_values(4))
     rows = []
     for _, row in df.iterrows():
-        url = row["URL"]
-        if url not in existing_urls:
+        if row["URL"] not in existing:
             rows.append([
-                "",              # blank for column A
-                row["Title"],    # B
-                row["Author"],   # C
-                url,             # D
-                row["Subreddit"] # E
+                "",                # col A blank
+                row["Title"],      # col B
+                row["Author"],     # col C
+                row["URL"],        # col D
+                row["Subreddit"]   # col E
             ])
-            existing_urls.add(url)
+            existing.add(row["URL"])
 
     if rows:
         sheet.append_rows(rows, value_input_option="USER_ENTERED")
 
-# ─── 4) Streamlit Main UI ───────────────────────────────────────────────────────
+# ─── 4) Main UI ─────────────────────────────────────────────────────────────────
 st.title("🌴 Honeymoon Travel Leads Monitor")
 
 sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
@@ -186,4 +115,4 @@ st.dataframe(df)
 
 if st.button("Export to Google Sheets"):
     export_to_google_sheet(df)
-    st.success(f"✅ Appended {len(df[df['URL'].isin(existing_urls)])} new leads!")
+    st.success("✅ New leads appended!")
