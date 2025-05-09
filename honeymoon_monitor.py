@@ -56,10 +56,11 @@ if btn:
 if not st.session_state.logged_in:
     st.stop()
 
-# optional logout
+# ─── Optional logout ────────────────────────────────────────────────────────────
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
-    st.experimental_rerun()
+    st.sidebar.info("✅ Logged out. Please refresh the page to log in again.")
+    st.stop()
 
 
 # ─── 1) Reddit & Google Sheets setup ────────────────────────────────────────────
