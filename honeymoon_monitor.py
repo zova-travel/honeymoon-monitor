@@ -77,22 +77,42 @@ def export_titles_to_column_b(df: pd.DataFrame):
 
 
 def export_to_google_sheet(df: pd.DataFrame):
+    # 1) Authorize
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
     ]
     creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "honeymoonmonitor-1e60328f5b40.json", scope
+        "honeymoonmonitor-1e60328f5b40.json",
+        scope
     )
     client = gspread.authorize(creds)
     sheet = client.open("honeymoon spreadsheet").sheet1
 
-    # Convert DataFrame to list of lists (without header)
-    rows = df.values.tolist()
-    # Append all rows at once
-    sheet.append_rows(rows, table_range="A2")  
-    # note: table_range="A2" starts appending at row 2,
-    # so row 1 (your headers) stays intact
+    # 2) Pull existing URLs from column D
+    try:
+        existing_urls = set(sheet.col_values(4))  # 4th column = D
+    except Exception:
+        existing_urls = set()
+
+    # 3) Build rows to append [Title, Author, URL]
+    rows_to_append = []
+    for _, row in df.iterrows():
+        url = row["URL"]
+        if url not in existing_urls:
+            rows_to_append.append([row["Title"], row["Author"], url])
+
+    # 4) Append into B2:D
+    if rows_to_append:
+        # This will append each sublist so that:
+        #   Title → column B
+        #   Author → column C
+        #   URL → column D
+        sheet.append_rows(
+            rows_to_append,
+            table_range="B2:D",
+            value_input_option="USER_ENTERED"
+        )
 
 # ─── 4) Streamlit UI ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
@@ -106,11 +126,6 @@ df = get_honeymoon_posts(sub)
 st.dataframe(df)
 
 # Export button (or auto-export logic)
-if not df.empty:
-    if st.button("Export to Google Sheets"):
-        export_titles_to_column_b(df)   # or whichever export function you’ve defined
-        st.success(f"Exported {len(df)} titles to column B!")
-    else:
-        st.info("Click above to export titles to column B.")
-
-
+if st.button("Export to Google Sheets"):
+    export_to_google_sheet(df)
+    st.success(f"Appended {len(df)} new leads!")
