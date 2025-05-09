@@ -85,10 +85,8 @@ KEYWORDS = [
 
 TARGET_SUBREDDITS = [
     "travel", "weddingplanning", "JustEngaged", "Weddings",
-    "HoneymoonTravel", "HoneymoonIdeas", "DestinationWedding",
-    "BridalFashion", "WeddingAdvice", "MarriageAdvice",
-    "JustMarried", "CouplesTravel", "OurWedding",
-    "WeddingDIY", "WeddingPhotography",
+    "HoneymoonTravel", "WeddingAdvice", "MarriageAdvice",
+    "JustMarried", "WeddingDIY", "WeddingPhotography",
     "weddingideas", "weddingvendors", "bachelorette",
     "weddingplanninghelp", "weddingdresses"
 ]
