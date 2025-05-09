@@ -7,45 +7,37 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from prawcore.exceptions import NotFound, Redirect
 
-# ─── 1) Page config (must be the first Streamlit call) ─────────────────────────
+# ─── 1) Page config (must be first) ─────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 
-# ─── 2) Build auth config from environment variables ────────────────────────────
+# ─── 2) Build auth config from ENV vars ──────────────────────────────────────────
 usernames = {}
-# Primary account
 u1 = os.getenv("AUTH_USER1_NAME")
 p1 = os.getenv("AUTH_USER1_PASSWORD")
 if u1 and p1:
     usernames[u1] = {"name": u1, "password": p1}
-# Optional second account
 u2 = os.getenv("AUTH_USER2_NAME")
 p2 = os.getenv("AUTH_USER2_PASSWORD")
 if u2 and p2:
     usernames[u2] = {"name": u2, "password": p2}
 
-config = {"credentials": {"usernames": usernames}}
-cookie_conf = {
+credentials = {"usernames": usernames}
+cookie_conf  = {
     "name":        os.getenv("AUTH_COOKIE_NAME"),
     "key":         os.getenv("AUTH_COOKIE_KEY"),
     "expiry_days": int(os.getenv("AUTH_COOKIE_EXPIRY_DAYS", "7")),
 }
 
-# ─── 3) Initialize authenticator ────────────────────────────────────────────────
+# ─── 3) Initialize streamlit-authenticator ──────────────────────────────────────
 authenticator = stauth.Authenticate(
-    credentials=config["credentials"],
+    credentials=credentials,
     cookie_name=cookie_conf["name"],
     key=cookie_conf["key"],
     cookie_expiry_days=cookie_conf["expiry_days"],
 )
 
-# ─── 4) Render login widget (4 args!) ──────────────────────────────────────────
-name, auth_status, username = authenticator.login(
-    "Login",      # widget title
-    "Username",   # username field label
-    "Password",   # password field label
-    "sidebar"     # location: main, sidebar or unrendered
-)
-
+# ─── 4) Render login widget (2 args: title, location) ──────────────────────────
+name, auth_status, username = authenticator.login("Login", "sidebar")
 if not auth_status:
     if auth_status is False:
         st.sidebar.error("❌ Incorrect username or password")
@@ -55,7 +47,7 @@ if not auth_status:
 authenticator.logout("Logout", "sidebar")
 st.sidebar.write(f"👋 Welcome *{name}*!")
 
-# ─── 6) Reddit & Google Sheets Setup ────────────────────────────────────────────
+# ─── 6) Reddit & Google Sheets setup ────────────────────────────────────────────
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
@@ -63,20 +55,20 @@ reddit = praw.Reddit(
 )
 
 KEYWORDS = [
-    "honeymoon", "just married", "getting married", "destination wedding",
-    "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip",
-    "bridal shower", "engaged", "engagement ring", "bridal registry",
-    "wedding venue", "wedding ceremony", "wedding photography",
-    "bachelorette party", "anniversary trip", "minimoon", "elopement",
-    "newlyweds", "bridal party", "wedding favors", "wedding music"
+    "honeymoon","just married","getting married","destination wedding",
+    "romantic getaway","couples trip","post-wedding vacation","wedding trip",
+    "bridal shower","engaged","engagement ring","bridal registry",
+    "wedding venue","wedding ceremony","wedding photography",
+    "bachelorette party","anniversary trip","minimoon","elopement",
+    "newlyweds","bridal party","wedding favors","wedding music"
 ]
 
 TARGET_SUBREDDITS = [
-    "travel", "weddingplanning", "JustEngaged", "Weddings",
-    "HoneymoonTravel", "WeddingAdvice", "MarriageAdvice",
-    "JustMarried", "WeddingDIY", "WeddingPhotography",
-    "weddingideas", "weddingvendors", "bachelorette",
-    "weddingplanninghelp", "weddingdresses"
+    "travel","weddingplanning","JustEngaged","Weddings",
+    "HoneymoonTravel","WeddingAdvice","MarriageAdvice",
+    "JustMarried", "WeddingDIY","WeddingPhotography",
+    "weddingideas","weddingvendors","bachelorette",
+    "weddingplanninghelp","weddingdresses"
 ]
 
 def get_honeymoon_posts(subreddit_name: str) -> pd.DataFrame:
@@ -110,10 +102,9 @@ def export_to_google_sheet(df: pd.DataFrame):
     client = gspread.authorize(creds)
     sheet  = client.open("honeymoon spreadsheet").sheet1
 
-    # Get existing URLs (col D) to avoid duplicates
     try:
-        existing_urls = set(sheet.col_values(4))
-    except Exception:
+        existing_urls = set(sheet.col_values(4))  # col D
+    except:
         existing_urls = set()
 
     rows = []
@@ -121,11 +112,11 @@ def export_to_google_sheet(df: pd.DataFrame):
         url = row["URL"]
         if url not in existing_urls:
             rows.append([
-                "",                # Column A blank
-                row["Title"],      # Column B
-                row["Author"],     # Column C
-                url,               # Column D
-                row["Subreddit"]   # Column E
+                "",                # col A blank
+                row["Title"],      # col B
+                row["Author"],     # col C
+                url,               # col D
+                row["Subreddit"]   # col E
             ])
             existing_urls.add(url)
 
