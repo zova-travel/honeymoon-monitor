@@ -15,24 +15,42 @@ reddit = praw.Reddit(
 
 # ─── 2) Keywords & Subreddit List ───────────────────────────────────────────────
 KEYWORDS = [
+    # Existing ones…
     "honeymoon", "just married", "getting married", "destination wedding",
-    "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip"
+    "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip",
+
+    # New additions:
+    "bridal shower",          # pre-wedding party planning
+    "engaged",                # general engagement announcements
+    "engagement ring",        # ring shopping/questions
+    "bridal registry",        # registry setup and gift ideas
+    "wedding venue",          # searching for ceremony/reception locations
+    "wedding ceremony",       # ceremony-specific questions
+    "wedding photography",    # photographer recommendations
+    "bachelorette party",     # party planning before the wedding
+    "anniversary trip",       # post-wedding trips for anniversaries
+    "minimoon",               # a shorter honeymoon right after the wedding
+    "elopement",              # intimate wedding discussions
+    "newlyweds",              # life as a married couple
+    "bridal party",           # maids of honor, bridesmaids, etc.
+    "wedding favors",         # guest gift ideas
+    "wedding music"           # DJ/band playlist questions
 ]
 
 TARGET_SUBREDDITS = [
-    "travel",
-    "weddingplanning",
-    "JustEngaged",
-    "Weddings",
-    "HoneymoonTravel",
-    "HoneymoonIdeas",
-    "Marriage",
-    "relationship_advice",
-    "DestinationWedding",
-    "BridalFashion",
-    "BridetoBe",
-    "AskMarriage"
+    "travel", "weddingplanning", "JustEngaged", "Weddings",
+    "HoneymoonTravel", "WeddingAdvice", "MarriageAdvice",
+    "JustMarried", "CouplesTravel", "OurWedding",
+    "WeddingDIY", "WeddingPhotography",
+    # ── New additions ──
+    "weddingideas",
+    "weddingvendors",
+    "bachelorette",
+    "weddingplanninghelp",
+    "weddingdresses"
 ]
+
+
 
 # ─── 3) Helper Functions ─────────────────────────────────────────────────────────
 def get_honeymoon_posts(subreddit_name: str):
