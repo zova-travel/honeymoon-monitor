@@ -10,10 +10,27 @@ from prawcore.exceptions import NotFound, Redirect
 # ─── 1) Page config MUST be first ────────────────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 
-# ─── 2) Authentication (cookie + “remember me”) ─────────────────────────────────
-# Load your credentials & cookie settings from .streamlit/secrets.toml
-config      = st.secrets["credentials"]
-cookie_conf = st.secrets["cookie"]
+# ─── 2) Build credentials dict from env-vars
+config = {
+    "credentials": {
+        "user1": {
+            "name":     os.getenv("AUTH_USER1_NAME"),
+            "password": os.getenv("AUTH_USER1_PASSWORD")
+        },
+        # optional second user:
+        "user2": {
+            "name":     os.getenv("AUTH_USER2_NAME"),
+            "password": os.getenv("AUTH_USER2_PASSWORD")
+        }
+    }
+}
+
+# Build cookie settings from env-vars
+cookie_conf = {
+    "name":        os.getenv("AUTH_COOKIE_NAME"),
+    "key":         os.getenv("AUTH_COOKIE_KEY"),
+    "expiry_days": int(os.getenv("AUTH_COOKIE_EXPIRY_DAYS", "7")),
+}
 
 authenticator = stauth.Authenticate(
     credentials=config,
