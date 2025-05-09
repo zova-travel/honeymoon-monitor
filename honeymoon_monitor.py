@@ -91,41 +91,30 @@ def export_to_google_sheet(df: pd.DataFrame):
     client = gspread.authorize(creds)
     sheet = client.open("honeymoon spreadsheet").sheet1
 
-    # 2) Grab existing URLs from column D to avoid duplicates
+    # 2) Pull existing URLs from column D
     try:
         existing_urls = set(sheet.col_values(4))
     except Exception:
         existing_urls = set()
 
-    # 3) Build rows: ['', Title, Author, URL, Subreddit]
+    # 3) Build rows to append
     rows_to_append = []
     for _, row in df.iterrows():
         url = row["URL"]
         if url not in existing_urls:
-          rows_to_append.append([
-    "",                # blank for col A
-    row["Title"],      # col B
-    row["Author"],     # col C
-    row["URL"],        # col D
-    row["Subreddit"]   # col E
-])
+            rows_to_append.append([
+                "",                 # blank for column A
+                row["Title"],       # column B
+                row["Author"],      # column C
+                url,                # column D
+                row["Subreddit"]    # column E
+            ])
+            existing_urls.add(url)  # <— same indent as the append above
 
-            existing_urls.add(url)
-
-    # 4) Append them all at once
+    # 4) Append new rows if any
     if rows_to_append:
-        # No table_range: let gspread append at the first empty row
         sheet.append_rows(
             rows_to_append,
-            value_input_option="USER_ENTERED"
-        )
-
-    # 4) Append into B2:E
-    if rows_to_append:
-        # B→E covers four columns: Title, Author, URL, Subreddit
-        sheet.append_rows(
-            rows_to_append,
-            table_range="B2:E",
             value_input_option="USER_ENTERED"
         )
 
