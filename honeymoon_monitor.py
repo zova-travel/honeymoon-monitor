@@ -7,28 +7,26 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from prawcore.exceptions import NotFound, Redirect
 
-# ─── 1) Page config (must be first) ─────────────────────────────────────────────
+# ─── 1) Page config (first Streamlit call) ─────────────────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 
-# ─── 2) Build auth config from ENV vars ──────────────────────────────────────────
+# ─── 2) Build auth config from ENV vars ─────────────────────────────────────────
 usernames = {}
-u1 = os.getenv("AUTH_USER1_NAME")
-p1 = os.getenv("AUTH_USER1_PASSWORD")
+u1 = os.getenv("AUTH_USER1_NAME"); p1 = os.getenv("AUTH_USER1_PASSWORD")
 if u1 and p1:
     usernames[u1] = {"name": u1, "password": p1}
-u2 = os.getenv("AUTH_USER2_NAME")
-p2 = os.getenv("AUTH_USER2_PASSWORD")
+u2 = os.getenv("AUTH_USER2_NAME"); p2 = os.getenv("AUTH_USER2_PASSWORD")
 if u2 and p2:
     usernames[u2] = {"name": u2, "password": p2}
 
 credentials = {"usernames": usernames}
-cookie_conf  = {
+cookie_conf = {
     "name":        os.getenv("AUTH_COOKIE_NAME"),
     "key":         os.getenv("AUTH_COOKIE_KEY"),
     "expiry_days": int(os.getenv("AUTH_COOKIE_EXPIRY_DAYS", "7")),
 }
 
-# ─── 3) Init authenticator ─────────────────────────────────────────────────────
+# ─── 3) Init authenticator ──────────────────────────────────────────────────────
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name=cookie_conf["name"],
@@ -36,21 +34,18 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=cookie_conf["expiry_days"],
 )
 
-# ─── 4) Render login widget with correct 'location' keyword ────────────────────
-name, auth_status, username = authenticator.login(
-    "Login",
-    location="sidebar"
-)
+# ─── 4) Login widget (2 args!) ─────────────────────────────────────────────────
+name, auth_status, username = authenticator.login("Login", "sidebar")
 if not auth_status:
     if auth_status is False:
         st.sidebar.error("❌ Incorrect username or password")
     st.stop()
 
-# ─── 5) Show logout & welcome ──────────────────────────────────────────────────
+# ─── 5) Logout & welcome ────────────────────────────────────────────────────────
 authenticator.logout("Logout", "sidebar")
-st.sidebar.write(f"👋 Welcome *{name}*!')")
+st.sidebar.write(f"👋 Welcome *{name}*!")
 
-# ─── 6) Reddit & Google Sheets setup ────────────────────────────────────────────
+# ─── 6) Reddit & Sheets setup ───────────────────────────────────────────────────
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
@@ -58,36 +53,35 @@ reddit = praw.Reddit(
 )
 
 KEYWORDS = [
-    "honeymoon", "just married", "getting married", "destination wedding",
-    "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip",
-    "bridal shower", "engaged", "engagement ring", "bridal registry",
-    "wedding venue", "wedding ceremony", "wedding photography",
-    "bachelorette party", "anniversary trip", "minimoon", "elopement",
-    "newlyweds", "bridal party", "wedding favors", "wedding music"
+    "honeymoon","just married","getting married","destination wedding",
+    "romantic getaway","couples trip","post-wedding vacation","wedding trip",
+    "bridal shower","engaged","engagement ring","bridal registry",
+    "wedding venue","wedding ceremony","wedding photography",
+    "bachelorette party","anniversary trip","minimoon","elopement",
+    "newlyweds","bridal party","wedding favors","wedding music"
 ]
 
 TARGET_SUBREDDITS = [
-    "travel", "weddingplanning", "JustEngaged", "Weddings",
-    "HoneymoonTravel", "WeddingAdvice", "MarriageAdvice",
-    "JustMarried", "WeddingDIY", "WeddingPhotography",
-    "weddingideas", "weddingvendors", "bachelorette",
-    "weddingplanninghelp", "weddingdresses"
+    "travel","weddingplanning","JustEngaged","Weddings",
+    "HoneymoonTravel","WeddingAdvice","MarriageAdvice",
+    "JustMarried","WeddingDIY","WeddingPhotography",
+    "weddingideas","weddingvendors","bachelorette",
+    "weddingplanninghelp","weddingdresses"
 ]
 
-def get_honeymoon_posts(subreddit_name: str) -> pd.DataFrame:
+def get_honeymoon_posts(sub: str) -> pd.DataFrame:
     posts = []
     try:
-        _ = reddit.subreddit(subreddit_name).id
-        submissions = reddit.subreddit(subreddit_name).new(limit=50)
+        _ = reddit.subreddit(sub).id
+        submissions = reddit.subreddit(sub).new(limit=50)
     except (NotFound, Redirect):
-        st.warning(f"r/{subreddit_name} not found—skipping.")
+        st.warning(f"r/{sub} not found—skipping.")
         return pd.DataFrame(posts)
-
     for post in submissions:
         text = (post.title + " " + (post.selftext or "")).lower()
         if any(k in text for k in KEYWORDS):
             posts.append({
-                "Subreddit": subreddit_name,
+                "Subreddit": sub,
                 "Title":     post.title,
                 "Author":    post.author.name if post.author else "N/A",
                 "URL":       f"https://reddit.com{post.permalink}"
@@ -97,7 +91,7 @@ def get_honeymoon_posts(subreddit_name: str) -> pd.DataFrame:
 def export_to_google_sheet(df: pd.DataFrame):
     scope = [
         "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
+        "https://www.googleapis.com/auth/drive",
     ]
     creds  = ServiceAccountCredentials.from_json_keyfile_name(
         "honeymoonmonitor-1e60328f5b40.json", scope
@@ -106,29 +100,27 @@ def export_to_google_sheet(df: pd.DataFrame):
     sheet  = client.open("honeymoon spreadsheet").sheet1
 
     try:
-        existing_urls = set(sheet.col_values(4))  # col D
+        existing = set(sheet.col_values(4))  # column D
     except:
-        existing_urls = set()
+        existing = set()
 
     rows = []
     for _, row in df.iterrows():
-        url = row["URL"]
-        if url not in existing_urls:
+        if row["URL"] not in existing:
             rows.append([
-                "",                # col A blank
-                row["Title"],      # col B
-                row["Author"],     # col C
-                url,                # col D
-                row["Subreddit"]   # col E
+                "",                # A blank
+                row["Title"],      # B
+                row["Author"],     # C
+                row["URL"],        # D
+                row["Subreddit"]   # E
             ])
-            existing_urls.add(url)
+            existing.add(row["URL"])
 
     if rows:
         sheet.append_rows(rows, value_input_option="USER_ENTERED")
 
-# ─── 7) Main Streamlit UI ───────────────────────────────────────────────────────
+# ─── 7) Main UI ────────────────────────────────────────────────────────────────
 st.title("🌴 Honeymoon Travel Leads Monitor")
-
 sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
 df  = get_honeymoon_posts(sub)
 st.dataframe(df)
