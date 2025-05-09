@@ -28,7 +28,7 @@ cookie_conf  = {
     "expiry_days": int(os.getenv("AUTH_COOKIE_EXPIRY_DAYS", "7")),
 }
 
-# ─── 3) Initialize streamlit-authenticator ──────────────────────────────────────
+# ─── 3) Init authenticator ─────────────────────────────────────────────────────
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name=cookie_conf["name"],
@@ -36,8 +36,11 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=cookie_conf["expiry_days"],
 )
 
-# ─── 4) Render login widget (2 args: title, location) ──────────────────────────
-name, auth_status, username = authenticator.login("Login", "sidebar")
+# ─── 4) Render login widget with correct 'location' keyword ────────────────────
+name, auth_status, username = authenticator.login(
+    "Login",
+    location="sidebar"
+)
 if not auth_status:
     if auth_status is False:
         st.sidebar.error("❌ Incorrect username or password")
@@ -45,7 +48,7 @@ if not auth_status:
 
 # ─── 5) Show logout & welcome ──────────────────────────────────────────────────
 authenticator.logout("Logout", "sidebar")
-st.sidebar.write(f"👋 Welcome *{name}*!")
+st.sidebar.write(f"👋 Welcome *{name}*!')")
 
 # ─── 6) Reddit & Google Sheets setup ────────────────────────────────────────────
 reddit = praw.Reddit(
@@ -55,20 +58,20 @@ reddit = praw.Reddit(
 )
 
 KEYWORDS = [
-    "honeymoon","just married","getting married","destination wedding",
-    "romantic getaway","couples trip","post-wedding vacation","wedding trip",
-    "bridal shower","engaged","engagement ring","bridal registry",
-    "wedding venue","wedding ceremony","wedding photography",
-    "bachelorette party","anniversary trip","minimoon","elopement",
-    "newlyweds","bridal party","wedding favors","wedding music"
+    "honeymoon", "just married", "getting married", "destination wedding",
+    "romantic getaway", "couples trip", "post-wedding vacation", "wedding trip",
+    "bridal shower", "engaged", "engagement ring", "bridal registry",
+    "wedding venue", "wedding ceremony", "wedding photography",
+    "bachelorette party", "anniversary trip", "minimoon", "elopement",
+    "newlyweds", "bridal party", "wedding favors", "wedding music"
 ]
 
 TARGET_SUBREDDITS = [
-    "travel","weddingplanning","JustEngaged","Weddings",
-    "HoneymoonTravel","WeddingAdvice","MarriageAdvice",
-    "JustMarried", "WeddingDIY","WeddingPhotography",
-    "weddingideas","weddingvendors","bachelorette",
-    "weddingplanninghelp","weddingdresses"
+    "travel", "weddingplanning", "JustEngaged", "Weddings",
+    "HoneymoonTravel", "WeddingAdvice", "MarriageAdvice",
+    "JustMarried", "WeddingDIY", "WeddingPhotography",
+    "weddingideas", "weddingvendors", "bachelorette",
+    "weddingplanninghelp", "weddingdresses"
 ]
 
 def get_honeymoon_posts(subreddit_name: str) -> pd.DataFrame:
@@ -115,7 +118,7 @@ def export_to_google_sheet(df: pd.DataFrame):
                 "",                # col A blank
                 row["Title"],      # col B
                 row["Author"],     # col C
-                url,               # col D
+                url,                # col D
                 row["Subreddit"]   # col E
             ])
             existing_urls.add(url)
