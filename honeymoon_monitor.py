@@ -1,57 +1,55 @@
+import os
 import streamlit as st
 import streamlit_authenticator as stauth
-import os
 import pandas as pd
 import praw
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from prawcore.exceptions import NotFound, Redirect
 
-# ─── 1) Page config MUST be first ────────────────────────────────────────────────
+# ─── 1) Page config (must be the first Streamlit call) ─────────────────────────
 st.set_page_config(page_title="Honeymoon Leads Monitor", layout="wide")
 
-# ─── 2) Build credentials dict from env-vars
-config = {
-    "credentials": {
-        "user1": {
-            "name":     os.getenv("AUTH_USER1_NAME"),
-            "password": os.getenv("AUTH_USER1_PASSWORD")
-        },
-        # optional second user:
-        "user2": {
-            "name":     os.getenv("AUTH_USER2_NAME"),
-            "password": os.getenv("AUTH_USER2_PASSWORD")
-        }
-    }
-}
+# ─── 2) Build auth config from environment variables ────────────────────────────
+usernames = {}
+# Primary account
+u1 = os.getenv("AUTH_USER1_NAME")
+p1 = os.getenv("AUTH_USER1_PASSWORD")
+if u1 and p1:
+    usernames[u1] = {"name": u1, "password": p1}
+# Optional second account
+u2 = os.getenv("AUTH_USER2_NAME")
+p2 = os.getenv("AUTH_USER2_PASSWORD")
+if u2 and p2:
+    usernames[u2] = {"name": u2, "password": p2}
 
-# Build cookie settings from env-vars
+config = {"credentials": {"usernames": usernames}}
 cookie_conf = {
     "name":        os.getenv("AUTH_COOKIE_NAME"),
     "key":         os.getenv("AUTH_COOKIE_KEY"),
     "expiry_days": int(os.getenv("AUTH_COOKIE_EXPIRY_DAYS", "7")),
 }
 
+# ─── 3) Initialize authenticator ────────────────────────────────────────────────
 authenticator = stauth.Authenticate(
-    credentials=config,
+    credentials=config["credentials"],
     cookie_name=cookie_conf["name"],
     key=cookie_conf["key"],
     cookie_expiry_days=cookie_conf["expiry_days"],
 )
 
-# Show the login widget in the sidebar
+# ─── 4) Show login widget ───────────────────────────────────────────────────────
 name, auth_status, username = authenticator.login("Login", "sidebar")
-
 if not auth_status:
     if auth_status is False:
         st.sidebar.error("❌ Incorrect username or password")
-    st.stop()  # halt here until logged in
+    st.stop()
 
-# Once logged in, show a logout button
+# ─── 5) Show logout & welcome ──────────────────────────────────────────────────
 authenticator.logout("Logout", "sidebar")
 st.sidebar.write(f"👋 Welcome *{name}*!")
 
-# ─── 3) Reddit & Google Sheets Setup ────────────────────────────────────────────
+# ─── 6) Reddit & Google Sheets Setup ────────────────────────────────────────────
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
@@ -98,7 +96,7 @@ def get_honeymoon_posts(subreddit_name: str) -> pd.DataFrame:
 def export_to_google_sheet(df: pd.DataFrame):
     scope = [
         "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive"
     ]
     creds  = ServiceAccountCredentials.from_json_keyfile_name(
         "honeymoonmonitor-1e60328f5b40.json", scope
@@ -106,24 +104,29 @@ def export_to_google_sheet(df: pd.DataFrame):
     client = gspread.authorize(creds)
     sheet  = client.open("honeymoon spreadsheet").sheet1
 
-    # Pull existing URLs (col D)
-    existing = set(sheet.col_values(4))
+    # Get existing URLs (col D) to avoid duplicates
+    try:
+        existing_urls = set(sheet.col_values(4))
+    except Exception:
+        existing_urls = set()
+
     rows = []
     for _, row in df.iterrows():
-        if row["URL"] not in existing:
+        url = row["URL"]
+        if url not in existing_urls:
             rows.append([
-                "",                # col A blank
-                row["Title"],      # col B
-                row["Author"],     # col C
-                row["URL"],        # col D
-                row["Subreddit"]   # col E
+                "",                # Column A blank
+                row["Title"],      # Column B
+                row["Author"],     # Column C
+                url,               # Column D
+                row["Subreddit"]   # Column E
             ])
-            existing.add(row["URL"])
+            existing_urls.add(url)
 
     if rows:
         sheet.append_rows(rows, value_input_option="USER_ENTERED")
 
-# ─── 4) Main UI ─────────────────────────────────────────────────────────────────
+# ─── 7) Main Streamlit UI ───────────────────────────────────────────────────────
 st.title("🌴 Honeymoon Travel Leads Monitor")
 
 sub = st.selectbox("Choose subreddit to scan:", TARGET_SUBREDDITS)
